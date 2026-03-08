@@ -212,6 +212,21 @@ c(")(")    Center your divs, or he'll hide your socks!
                 shield.style.display = 'block';
                 shield.style.pointerEvents = 'auto'; // Now it blocks interaction!
             }
+            if (event.data == YT.PlayerState.ENDED) {
+            // 1. Drop the shield so they can interact again
+            shield.style.pointerEvents = 'none';
+            shield.style.display = 'none';
+            
+            // 2. Bring back the curtain with a "Replay" message
+            curtain.style.display = 'flex';
+            curtain.innerHTML = `
+                <div class="loader-content">
+                    <h2>TRANSMISSION ENDED</h2>
+                    <button onclick="location.reload()" style="padding:10px 20px; background:#00ff00; color:#000; border:none; font-weight:bold; cursor:pointer;">REPLAY MISSION</button>
+                    <p style="margin-top:20px;">Move to the next location!</p>
+                </div>
+            `;
+            }
         }
     
         document.getElementById('start-button').addEventListener('click', function() {
