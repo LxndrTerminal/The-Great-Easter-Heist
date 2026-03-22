@@ -136,22 +136,30 @@
 
      // --- 1.5 SUPABASE INITIALIZATION ---
         let sbClient; 
-        
-        // 1. Check if we've already saved a client to the window object
-        if (typeof window.activeSupabaseClient !== 'undefined') {
-            sbClient = window.activeSupabaseClient;
-        } else {
+
+        async function initSupabase() {
+            // If already initialized, just return it
+            if (sbClient) return sbClient;
+
             const supabaseUrl = 'REPLACE_WITH_URL';
             const supabaseKey = 'REPLACE_WITH_KEY';
-            
-            // 2. Only initialize if the placeholders have been replaced by Vercel
+
+            // Check if Vercel did the swap
             if (supabaseUrl !== 'REPLACE_WITH_URL' && supabaseUrl !== '') {
-                // Use the CDN's "createClient" function to build our specific client
-                sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-                
-                // 3. Save it to a unique name on the window to prevent re-declaration issues
-                window.activeSupabaseClient = sbClient; 
+                try {
+                    // Check if the library is loaded
+                    if (window.supabase) {
+                        sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                        console.log("Agent Clover: Secure Connection Established.");
+                        return sbClient;
+                    } else {
+                        console.error("Supabase CDN not loaded yet.");
+                    }
+                } catch (e) {
+                    console.error("Connection Failed:", e);
+                }
             }
+            return null;
         }
 
         // Generate a unique ID for this specific deck's card
@@ -159,15 +167,15 @@
         const deckId = urlParams.get('deck') || 'DEFAULT_DECK'; 
         const databaseCardId = `${deckId}-STATION-${clueId}`;
 
-        // --- 2. MAIN BUTTON LOGIC ---
         document.getElementById('start-button').addEventListener('click', async function() {
             document.getElementById('ui-layer').style.display = 'none';
 
+            // BOOT UP THE CLIENT HERE
+            await initSupabase();
+
             if (isVideoMission) {
-                // Trigger V1 YouTube Logic
                 initYouTubePlayer();
             } else {
-                // Trigger V2 SaaS Text Logic
                 document.getElementById('tactical-container').style.display = 'block';
                 await fetchRiddleData();
             }
