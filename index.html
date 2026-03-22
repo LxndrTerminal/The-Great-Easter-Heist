@@ -124,194 +124,149 @@
         </div>
     </div>
 
-    <script>
-        // --- 1. CONFIGURATION ---
-        const urlParams = new URLSearchParams(window.location.search);
-        const clueId = urlParams.get('clue') || '1';
-        
-        // Define which clues trigger the intro/outro videos
-        const videoClues = ['0', '10']; 
-        const isVideoMission = videoClues.includes(clueId);
+   <script>
+    // 1. CONFIG & GLOBALS
+    const urlParams = new URLSearchParams(window.location.search);
+    const clueId = urlParams.get('clue') || '1';
+    const deckId = urlParams.get('deck') || 'DEFAULT_DECK'; 
+    const databaseCardId = `${deckId}-STATION-${clueId}`;
+    const videoClues = ['0', '10']; 
+    const isVideoMission = videoClues.includes(clueId);
 
+    let sbClient = null;
 
-        // --- 1.5 SUPABASE INITIALIZATION ---
-        let sbClient = null;
+    // 2. SUPABASE INITIALIZATION
+    async function getSupabaseClient() {
+        if (sbClient) return sbClient;
 
-        async function getSupabaseClient() {
-            if (sbClient) return sbClient;
+        const supabaseUrl = 'REPLACE_WITH_URL';
+        const supabaseKey = 'REPLACE_WITH_KEY';
 
-            const supabaseUrl = 'REPLACE_WITH_URL';
-            const supabaseKey = 'REPLACE_WITH_KEY';
-
-            // Check if Vercel swapped the placeholders
-            if (supabaseUrl.includes('REPLACE_WITH_URL') || supabaseUrl === '') {
-                console.warn("Environment variables not injected. Using LocalStorage.");
-                return null;
-            }
-
-            // Wait up to 2 seconds for the CDN script to be ready
-            for (let i = 0; i < 10; i++) {
-                if (window.supabase && typeof window.supabase.createClient === 'function') {
-                    sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-                    console.log("✅ Supabase Connected Successfully");
-                    return sbClient;
-                }
-                await new Promise(resolve => setTimeout(resolve, 200)); // Wait 200ms
-            }
-
-            console.error("❌ Supabase library failed to load from CDN.");
+        // Check if Vercel swapped the placeholders
+        if (supabaseUrl.includes('REPLACE_WITH_URL') || supabaseUrl === '') {
+            console.warn("Using LocalStorage fallback.");
             return null;
         }
 
-        // --- 3. V2 SaaS PLATFORM LOGIC (TEXT) ---
-        async function fetchRiddleData() {
-            const client = await getSupabaseClient();
-            
-            if (!client) {
-                console.warn("Falling back to LocalStorage...");
-                const localData = localStorage.getItem(databaseCardId);
-                if (localData) showTypewriter(localData);
-                else document.getElementById('handler-ui').style.display = 'flex';
-                return;
+        try {
+            // Wait for CDN library to be ready
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                console.log("✅ Database Connected.");
+                return sbClient;
             }
+        } catch (e) {
+            console.error("Connection Error:", e);
+        }
+        return null;
+    }
 
-            try {
-                const { data, error } = await client
-                    .from('mission_data')
-                    .select('*')
-                    .eq('card_id', databaseCardId)
-                    .single();
+    // 3. MAIN BUTTON LOGIC
+    document.getElementById('start-button').addEventListener('click', async function() {
+        console.log("Decrypt button clicked...");
+        document.getElementById('ui-layer').style.display = 'none';
 
-                if (data && data.is_locked) {
-                    showTypewriter(data.riddle_text);
-                } else {
-                    document.getElementById('handler-ui').style.display = 'flex';
-                }
-            } catch (err) {
-                console.error("Database Query Error:", err);
-                document.getElementById('handler-ui').style.display = 'flex';
-            }
+        if (isVideoMission) {
+            initYouTubePlayer();
+        } else {
+            document.getElementById('tactical-container').style.display = 'block';
+            await fetchRiddleData();
+        }
+    });
+
+    // 4. DATABASE FETCH
+    async function fetchRiddleData() {
+        const client = await getSupabaseClient();
+        
+        if (!client) {
+            const localData = localStorage.getItem(databaseCardId);
+            if (localData) showTypewriter(localData);
+            else document.getElementById('handler-ui').style.display = 'flex';
+            return;
         }
 
-        // Lock the riddle into the database
-        document.getElementById('lock-riddle-btn').addEventListener('click', async () => {
-            const text = document.getElementById('riddle-input').value;
-            if (!text) return alert("Please enter intel.");
+        const { data, error } = await client
+            .from('mission_data')
+            .select('*')
+            .eq('card_id', databaseCardId)
+            .single();
 
-            if (!sbClient) {
-                console.log("Saving to local fallback...");
-                localStorage.setItem(databaseCardId, text);
-            } else {
-                const { error } = await sbClient.from('mission_data').upsert({ 
-                    card_id: databaseCardId, 
-                    riddle_text: text, 
-                    is_locked: true 
-                });
-                if (error) {
-                    console.error("Supabase Error:", error);
-                    return alert("Encryption failed. Check connection.");
-                }
-            }
-
-            document.getElementById('handler-ui').style.display = 'none';
-            showTypewriter(text);
-        });
-
-        // The Cinematic Text Reveal
-        function showTypewriter(text) {
-            document.getElementById('terminal-ui').style.display = 'flex';
-            const element = document.getElementById('typewriter-text');
-            element.innerHTML = '';
-            let i = 0;
-            
-            function typeWriter() {
-                if (i < text.length) {
-                    element.innerHTML += text.charAt(i);
-                    i++;
-                    setTimeout(typeWriter, 50); 
-                }
-            }
-            typeWriter();
+        if (data && data.is_locked) {
+            showTypewriter(data.riddle_text);
+        } else {
+            document.getElementById('handler-ui').style.display = 'flex';
         }
+    }
 
-        // --- 4. V1 YOUTUBE LOGIC (VIDEOS) ---
-        const videoMap = {
-            '0': 'HizAxchnSaM',
-            '10': 'EZwp9gb4Zl4',
-            '42069': 'dQw4w9WgXcQ'
-        };
+    // 5. LOCK RIDDLE
+    document.getElementById('lock-riddle-btn').addEventListener('click', async () => {
+        const text = document.getElementById('riddle-input').value;
+        if (!text) return alert("Please enter intel.");
 
-        function initYouTubePlayer() {
-            const container = document.getElementById('player-container');
-            container.style.display = 'block';
-            
-            if (container.requestFullscreen) container.requestFullscreen();
-            else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+        const client = await getSupabaseClient();
 
-            if (typeof YT !== 'undefined' && YT.Player) {
-                launchVideo();
-            } else {
-                var tag = document.createElement('script');
-                tag.src = "https://www.youtube.com/iframe_api";
-                var firstScriptTag = document.getElementsByTagName('script')[0];
-                firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-                window.onYouTubeIframeAPIReady = launchVideo;
-            }
-        }
-
-        var player;
-        function launchVideo() {
-            player = new YT.Player('player', {
-                height: '100%', width: '100%',
-                videoId: videoMap[clueId] || videoMap['0'],
-                playerVars: {
-                    'autoplay': 1, 'controls': 1, 'modestbranding': 1,
-                    'rel': 0, 'showinfo': 0, 'fs': 1
-                },
-                events: { 'onStateChange': onPlayerStateChange }
+        if (!client) {
+            localStorage.setItem(databaseCardId, text);
+        } else {
+            const { error } = await client.from('mission_data').upsert({ 
+                card_id: databaseCardId, 
+                riddle_text: text, 
+                is_locked: true 
             });
+            if (error) return alert("Encryption failed.");
+        }
 
-            // Force lift fallback
-            setTimeout(() => {
-                const curtain = document.getElementById('curtain');
-                if (curtain.style.display !== 'none') {
-                    curtain.style.display = 'none';
-                    document.getElementById('shield').style.display = 'block';
+        document.getElementById('handler-ui').style.display = 'none';
+        showTypewriter(text);
+    });
+
+    // 6. UI EFFECTS
+    function showTypewriter(text) {
+        document.getElementById('terminal-ui').style.display = 'flex';
+        const element = document.getElementById('typewriter-text');
+        element.innerHTML = '';
+        let i = 0;
+        function type() {
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i);
+                i++;
+                setTimeout(type, 50);
+            }
+        }
+        type();
+    }
+
+    // 7. YOUTUBE LOGIC
+    const videoMap = { '0': 'HizAxchnSaM', '10': 'EZwp9gb4Zl4', '42069': 'dQw4w9WgXcQ' };
+    let player;
+
+    function initYouTubePlayer() {
+        const container = document.getElementById('player-container');
+        container.style.display = 'block';
+        if (container.requestFullscreen) container.requestFullscreen();
+
+        if (window.YT && window.YT.Player) {
+            launchVideo();
+        } else {
+            const tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            document.head.appendChild(tag);
+            window.onYouTubeIframeAPIReady = launchVideo;
+        }
+    }
+
+    function launchVideo() {
+        player = new YT.Player('player', {
+            height: '100%', width: '100%',
+            videoId: videoMap[clueId] || videoMap['0'],
+            playerVars: { 'autoplay': 1, 'controls': 1 },
+            events: { 'onStateChange': (e) => {
+                if (e.data == YT.PlayerState.PLAYING) {
+                    document.getElementById('curtain').style.display = 'none';
                 }
-            }, 5000);
-        }
-
-        function onPlayerStateChange(event) {
-            const curtain = document.getElementById('curtain');
-            const shield = document.getElementById('shield');
-            
-            if (event.data == YT.PlayerState.PLAYING) {
-                curtain.style.display = 'none';
-                shield.style.display = 'block';
-                shield.style.pointerEvents = 'auto';
-            }
-            if (event.data == YT.PlayerState.ENDED) {
-                shield.style.pointerEvents = 'none';
-                shield.style.display = 'none';
-                curtain.style.display = 'flex';
-                curtain.innerHTML = `
-                    <div>
-                        <h2>TRANSMISSION ENDED</h2>
-                        <p style="margin-top:20px;">Move to the next location!</p>
-                    </div>`;
-            }
-        }
-
-        // --- EASTER EGG ---
-        let secretCode = "";
-        window.addEventListener("keydown", (e) => {
-            secretCode += e.key.toLowerCase();
-            if (secretCode.includes("carrot")) {
-                alert("🥕 BUNNY MODE ACTIVATED! 🥕");
-                document.body.style.backgroundColor = "#ff9900";
-                secretCode = ""; 
-            }
+            }}
         });
-    </script>
+    }
+</script>
 </body>
 </html>
