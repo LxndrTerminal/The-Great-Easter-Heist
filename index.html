@@ -134,74 +134,61 @@
         const isVideoMission = videoClues.includes(clueId);
 
 
-     // --- 1.5 SUPABASE INITIALIZATION ---
-        let sbClient; 
+        // --- 1.5 SUPABASE INITIALIZATION ---
+        let sbClient = null;
 
-        async function initSupabase() {
-            // If already initialized, just return it
+        async function getSupabaseClient() {
             if (sbClient) return sbClient;
 
             const supabaseUrl = 'REPLACE_WITH_URL';
             const supabaseKey = 'REPLACE_WITH_KEY';
 
-            // Check if Vercel did the swap
-            if (supabaseUrl !== 'REPLACE_WITH_URL' && supabaseUrl !== '') {
-                try {
-                    // Check if the library is loaded
-                    if (window.supabase) {
-                        sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-                        console.log("Agent Clover: Secure Connection Established.");
-                        return sbClient;
-                    } else {
-                        console.error("Supabase CDN not loaded yet.");
-                    }
-                } catch (e) {
-                    console.error("Connection Failed:", e);
-                }
+            // Check if Vercel swapped the placeholders
+            if (supabaseUrl.includes('REPLACE_WITH_URL') || supabaseUrl === '') {
+                console.warn("Environment variables not injected. Using LocalStorage.");
+                return null;
             }
+
+            // Wait up to 2 seconds for the CDN script to be ready
+            for (let i = 0; i < 10; i++) {
+                if (window.supabase && typeof window.supabase.createClient === 'function') {
+                    sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                    console.log("✅ Supabase Connected Successfully");
+                    return sbClient;
+                }
+                await new Promise(resolve => setTimeout(resolve, 200)); // Wait 200ms
+            }
+
+            console.error("❌ Supabase library failed to load from CDN.");
             return null;
         }
 
-        // Generate a unique ID for this specific deck's card
-        // Ideally pass a '?deck=BIA001' parameter in your QR codes later
-        const deckId = urlParams.get('deck') || 'DEFAULT_DECK'; 
-        const databaseCardId = `${deckId}-STATION-${clueId}`;
-
-        document.getElementById('start-button').addEventListener('click', async function() {
-            document.getElementById('ui-layer').style.display = 'none';
-
-            // BOOT UP THE CLIENT HERE
-            await initSupabase();
-
-            if (isVideoMission) {
-                initYouTubePlayer();
-            } else {
-                document.getElementById('tactical-container').style.display = 'block';
-                await fetchRiddleData();
-            }
-        });
-
         // --- 3. V2 SaaS PLATFORM LOGIC (TEXT) ---
         async function fetchRiddleData() {
-            // 1. Check our renamed 'sbClient' instance
-            if (!sbClient) { 
-                console.warn("Supabase not connected. Using LocalStorage fallback.");
+            const client = await getSupabaseClient();
+            
+            if (!client) {
+                console.warn("Falling back to LocalStorage...");
                 const localData = localStorage.getItem(databaseCardId);
                 if (localData) showTypewriter(localData);
                 else document.getElementById('handler-ui').style.display = 'flex';
                 return;
             }
 
-            // 2. Real Database Call
-            const { data, error } = await sbClient
-                .from('mission_data')
-                .select('*')
-                .eq('card_id', databaseCardId)
-                .single();
+            try {
+                const { data, error } = await client
+                    .from('mission_data')
+                    .select('*')
+                    .eq('card_id', databaseCardId)
+                    .single();
 
-            if (data && data.is_locked) {
-                showTypewriter(data.riddle_text);
-            } else {
+                if (data && data.is_locked) {
+                    showTypewriter(data.riddle_text);
+                } else {
+                    document.getElementById('handler-ui').style.display = 'flex';
+                }
+            } catch (err) {
+                console.error("Database Query Error:", err);
                 document.getElementById('handler-ui').style.display = 'flex';
             }
         }
