@@ -1,272 +1,307 @@
-<!-- TOP SECRET: My favorite snack is Toasted Almond Carrot Cake -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Easter Bunny Transmission</title>
+    <title>BIA Secure Terminal</title>
     <link href="https://fonts.googleapis.com/css2?family=Bubbler+One&family=Sniglet:wght@800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-      
         :root {
             --bunny-pink: #ffcceb;
             --easter-blue: #ccebff;
             --grass-green: #99ff99;
-            --egg-purple: #e2ccff;
+            --spy-green: #00ff00;
         }
 
         body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: var(--easter-blue);
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: var(--easter-blue);
             font-family: 'Sniglet', cursive;
         }
 
         /* The Easter Background Styling */
         #ui-layer {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            position: absolute; width: 100%; height: 100%; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
             background: linear-gradient(to bottom, var(--easter-blue) 0%, #ffffff 100%);
             z-index: 10;
         }
 
         .grass {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            height: 100px;
-            background: var(--grass-green);
-            border-top: 5px dashed #77dd77;
+            position: absolute; bottom: 0; width: 100%; height: 100px;
+            background: var(--grass-green); border-top: 5px dashed #77dd77;
         }
 
-        /* The "Unlock" Button */
         #start-button {
-            padding: 25px 50px;
-            font-size: 24px;
-            background-color: var(--bunny-pink);
-            color: #d81b60;
-            border: 5px solid white;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 10px 0 #f48fb1;
-            transition: all 0.1s;
-            z-index: 20;
-            text-transform: uppercase;
+            padding: 25px 50px; font-size: 24px; background-color: var(--bunny-pink);
+            color: #d81b60; border: 5px solid white; border-radius: 50px;
+            cursor: pointer; box-shadow: 0 10px 0 #f48fb1; text-transform: uppercase;
+            z-index: 20; transition: all 0.1s;
         }
+        #start-button:active { transform: translateY(5px); box-shadow: 0 5px 0 #f48fb1; }
 
-        #start-button:active {
-            transform: translateY(5px);
-            box-shadow: 0 5px 0 #f48fb1;
-        }
-
+        /* V1 YouTube Container */
         #player-container {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            background: #000;
-            z-index: 9999;
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh; background: #000; z-index: 9999;
         }
+        #player { width: 100%; height: 100%; }
         
         #curtain {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: #1a1a1a; /* Dark 'Agent' background */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10001; /* Sits above the player */
-            color: #00ff00; /* Spy green */
-            font-family: 'Courier New', Courier, monospace;
-            z-index: 10001; /* Must be higher than shield */
-            pointer-events: none; /* Allows you to tap the YouTube button underneath */
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #1a1a1a; display: flex; align-items: center; justify-content: center;
+            color: var(--spy-green); font-family: 'Courier New', Courier, monospace;
+            z-index: 10001; pointer-events: none; text-align: center;
         }
-        
-        .loader-content { text-align: center; }
         
         .spinner {
-            border: 4px solid rgba(0, 255, 0, 0.1);
-            border-left-color: #00ff00;
-            border-radius: 50%;
-            width: 50px; height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+            border: 4px solid rgba(0, 255, 0, 0.1); border-left-color: var(--spy-green);
+            border-radius: 50%; width: 50px; height: 50px;
+            animation: spin 1s linear infinite; margin: 0 auto 20px;
         }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         
         #shield {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: transparent;
-            z-index: 10000; /* Sits between player and curtain */
-            display: none; /* Keep hidden initially */
-            pointer-events: none; /* THIS IS KEY: Allows clicks to pass through */
-            }        
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: transparent; z-index: 10000; display: none; pointer-events: none;
         }
 
-        #player { width: 100%; height: 100%; }
+        /* V2 Tactical Text Container */
+        #tactical-container {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 9999; color: var(--spy-green);
+            font-family: 'Courier New', Courier, monospace; box-sizing: border-box; padding: 20px;
+        }
 
+        .handler-ui, .terminal-ui {
+            display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;
+        }
+
+        #riddle-input {
+            width: 90%; max-width: 500px; height: 150px; background: #111;
+            color: var(--spy-green); border: 2px solid var(--spy-green);
+            padding: 15px; font-family: inherit; font-size: 18px; margin: 20px 0;
+        }
+
+        .tactical-btn {
+            padding: 15px 30px; background: var(--spy-green); color: #000;
+            font-weight: bold; border: none; font-size: 18px; cursor: pointer;
+            text-transform: uppercase;
+        }
     </style>
 </head>
 <body>
-<!--
- (\ /)
-( . .)  <- Clover is watching your margins. 
-c(")(")    Center your divs, or he'll hide your socks!
--->  
     <div id="ui-layer">
         <h1 style="color: #5c6bc0; text-align: center; padding: 20px;">INCOMING BUNNY<br>TRANSMISSION...</h1>
-        <button id="start-button">🔊 DECRYPT & PLAY MESSAGE</button>
+        <button id="start-button">🔊 DECRYPT MESSAGE</button>
         <div class="grass"></div>
     </div>
 
-<div id="player-container">
-    <div id="player"></div>
-    
-    <div id="curtain">
-        <div class="loader-content">
-            <div class="spinner"></div>
-            <h2>ESTABLISHING CONNECTION...</h2>
-            <p>Decrypting Agent Clover's Message</p>
+    <div id="player-container">
+        <div id="player"></div>
+        <div id="curtain">
+            <div>
+                <div class="spinner"></div>
+                <h2>ESTABLISHING CONNECTION...</h2>
+                <p>Decrypting Agent Clover's Video</p>
+            </div>
+        </div>
+        <div id="shield"></div>
+    </div>
+
+    <div id="tactical-container">
+        <div id="handler-ui" class="handler-ui">
+            <h2>[HANDLER OVERRIDE REQUIRED]</h2>
+            <p>Database shows no active intel for this Sector.<br>Enter local mission coordinates / riddle below:</p>
+            <textarea id="riddle-input" placeholder="Example: Check the place where the cold air blows and the ice is kept..."></textarea>
+            <button class="tactical-btn" id="lock-riddle-btn">LOCK ENCRYPTION</button>
+        </div>
+
+        <div id="terminal-ui" class="terminal-ui">
+            <h2>[DECRYPTED INTEL RECEIVED]</h2>
+            <div id="typewriter-text" style="font-size: 24px; white-space: pre-wrap; margin-top: 20px; text-align: left; max-width: 600px;"></div>
         </div>
     </div>
 
-    <div id="shield"></div>
-</div>
-
     <script>
-      
-        // 1. Get Clue ID from URL (e.g., hunt.github.io/?clue=1)
+        // --- 1. CONFIGURATION ---
         const urlParams = new URLSearchParams(window.location.search);
         const clueId = urlParams.get('clue') || '1';
-        // The Secret Agent Console Log
-        console.log("%c STOP! %c Secret Agent Eyes Only! ", "color: #d81b60; font-size: 20px; font-weight: bold;", "color: #5c6bc0; font-size: 15px;");
-        console.log("Clover is watching... keep hunting, Agent " + clueId + "!");
-        // 2. Mapping your YouTube IDs here
+        
+        // Define which clues trigger the intro/outro videos
+        const videoClues = ['0', '10']; 
+        const isVideoMission = videoClues.includes(clueId);
+
+        // SUPABASE INIT (Replace with your actual keys from Supabase Dashboard)
+       // SUPABASE INIT
+        const supabaseUrl = window.env?.SUPABASE_URL || ''; 
+        const supabaseKey = window.env?.SUPABASE_ANON_KEY || '';
+                
+        let supabase;
+        if(supabaseUrl !== 'YOUR_SUPABASE_URL') {
+            supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        }
+
+        // Generate a unique ID for this specific deck's card
+        // Ideally pass a '?deck=BIA001' parameter in your QR codes later
+        const deckId = urlParams.get('deck') || 'DEFAULT_DECK'; 
+        const databaseCardId = `${deckId}-STATION-${clueId}`;
+
+        // --- 2. MAIN BUTTON LOGIC ---
+        document.getElementById('start-button').addEventListener('click', async function() {
+            document.getElementById('ui-layer').style.display = 'none';
+
+            if (isVideoMission) {
+                // Trigger V1 YouTube Logic
+                initYouTubePlayer();
+            } else {
+                // Trigger V2 SaaS Text Logic
+                document.getElementById('tactical-container').style.display = 'block';
+                await fetchRiddleData();
+            }
+        });
+
+        // --- 3. V2 SaaS PLATFORM LOGIC (TEXT) ---
+        async function fetchRiddleData() {
+            // Mock DB response for local testing if Supabase isn't hooked up yet
+            if(!supabase) {
+                console.warn("Supabase not connected. Using LocalStorage fallback for testing.");
+                const localData = localStorage.getItem(databaseCardId);
+                if(localData) showTypewriter(localData);
+                else document.getElementById('handler-ui').style.display = 'flex';
+                return;
+            }
+
+            // Real Database Call
+            const { data, error } = await supabase
+                .from('mission_data')
+                .select('*')
+                .eq('card_id', databaseCardId)
+                .single();
+
+            if (data && data.is_locked) {
+                showTypewriter(data.riddle_text);
+            } else {
+                document.getElementById('handler-ui').style.display = 'flex';
+            }
+        }
+
+        // Lock the riddle into the database
+        document.getElementById('lock-riddle-btn').addEventListener('click', async () => {
+            const text = document.getElementById('riddle-input').value;
+            if(!text) return alert("Please enter intel.");
+
+            if(!supabase) {
+                localStorage.setItem(databaseCardId, text);
+            } else {
+                const { error } = await supabase.from('mission_data').upsert({ 
+                    card_id: databaseCardId, 
+                    riddle_text: text, 
+                    is_locked: true 
+                });
+                if(error) return alert("Encryption failed. Check connection.");
+            }
+
+            document.getElementById('handler-ui').style.display = 'none';
+            showTypewriter(text);
+        });
+
+        // The Cinematic Text Reveal
+        function showTypewriter(text) {
+            document.getElementById('terminal-ui').style.display = 'flex';
+            const element = document.getElementById('typewriter-text');
+            element.innerHTML = '';
+            let i = 0;
+            
+            function typeWriter() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(typeWriter, 50); // Typing speed
+                }
+            }
+            typeWriter();
+        }
+
+        // --- 4. V1 YOUTUBE LOGIC (VIDEOS) ---
         const videoMap = {
-            '1': 'ZuZZnovXLBs',
-            '2': 'yq7zA4jeGKM',
-            '3': 'EjjHTYZhJM4',
-            '4': 'fM1BtVtJogM',
-            '5': 'c8J5KZwPMTo',
-            '6': 'nRGl_-gNoPI',
-            '7': 'iSDM_Iz--Wg',
-            '8': 'XHltn6n2WFw',
-            '9': 'ZgpuAlAyY-c',
-            '10': 'EZwp9gb4Zl4',
-            '42069': 'dQw4w9WgXcQ',
-            '99': 'dQw4w9WgXcQ',
             '0': 'HizAxchnSaM',
-            // ... add all 11 IDs here
+            '10': 'EZwp9gb4Zl4',
+            '42069': 'dQw4w9WgXcQ'
         };
 
-        const videoId = videoMap[clueId];
-
-        // 3. Load YouTube API
-        var tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        var firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-        var player;
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player', {
-                height: '100%',
-                width: '100%',
-                videoId: videoId,
-                playerVars: {
-                    'autoplay': 0,
-                    'controls': 1,
-                    'modestbranding': 1,
-                    'rel': 0,
-                    'showinfo': 0,
-                    'iv_load_policy': 3,
-                    'fs': 1 // Allow full screen button
-                },
-                events: {
-                    'onStateChange': onPlayerStateChange
-                }
-            });
-        }
-
-
-        function onPlayerStateChange(event) {
-            if (event.data == YT.PlayerState.PLAYING) {
-                // 1. Hide the loading screen
-                curtain.style.display = 'none';
-                
-                // 2. Make the shield visible AND active
-                shield.style.display = 'block';
-                shield.style.pointerEvents = 'auto'; // Now it blocks interaction!
-            }
-            if (event.data == YT.PlayerState.ENDED) {
-            // 1. Drop the shield so they can interact again
-            shield.style.pointerEvents = 'none';
-            shield.style.display = 'none';
-            
-            // 2. Bring back the curtain with a "Replay" message
-            curtain.style.display = 'flex';
-            curtain.innerHTML = `
-                <div class="loader-content">
-                    <h2>TRANSMISSION ENDED</h2>
-                    <button onclick="location.reload()" style="padding:10px 20px; background:#00ff00; color:#000; border:none; font-weight:bold; cursor:pointer;">REPLAY MISSION</button>
-                    <p style="margin-top:20px;">Move to the next location!</p>
-                </div>
-            `;
-            }
-        }
-    
-        document.getElementById('start-button').addEventListener('click', function() {
+        function initYouTubePlayer() {
             const container = document.getElementById('player-container');
             container.style.display = 'block';
             
-            // Request Fullscreen on the whole container
-            if (container.requestFullscreen) {
-                container.requestFullscreen();
-            } else if (container.webkitRequestFullscreen) {
-                container.webkitRequestFullscreen();
+            if (container.requestFullscreen) container.requestFullscreen();
+            else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+
+            if (typeof YT !== 'undefined' && YT.Player) {
+                launchVideo();
+            } else {
+                var tag = document.createElement('script');
+                tag.src = "https://www.youtube.com/iframe_api";
+                var firstScriptTag = document.getElementsByTagName('script')[0];
+                firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+                window.onYouTubeIframeAPIReady = launchVideo;
             }
-        // 2. Delay the Play command to let the phone handle the transition
+        }
+
+        var player;
+        function launchVideo() {
+            player = new YT.Player('player', {
+                height: '100%', width: '100%',
+                videoId: videoMap[clueId] || videoMap['0'],
+                playerVars: {
+                    'autoplay': 1, 'controls': 1, 'modestbranding': 1,
+                    'rel': 0, 'showinfo': 0, 'fs': 1
+                },
+                events: { 'onStateChange': onPlayerStateChange }
+            });
+
+            // Force lift fallback
             setTimeout(() => {
-                if (player && player.playVideo) {
-                    player.playVideo();
-                }
-            }, 300);
-        
-            // 3. FORCE LIFT FALLBACK
-            // If the phone is slow and the API doesn't report 'PLAYING', 
-            // we manually hide the curtain after 5 seconds so they aren't stuck.
-            setTimeout(() => {
+                const curtain = document.getElementById('curtain');
                 if (curtain.style.display !== 'none') {
-                    console.log("Force lifting curtain due to slow connection...");
                     curtain.style.display = 'none';
                     document.getElementById('shield').style.display = 'block';
                 }
             }, 5000);
-        });
+        }
 
-      let secretCode = "";
-window.addEventListener("keydown", (e) => {
-    secretCode += e.key.toLowerCase();
-    if (secretCode.includes("carrot")) {
-        alert("🥕 BUNNY MODE ACTIVATED! 🥕\nClover says: You're a genius!");
-        document.body.style.backgroundColor = "#ff9900"; // Turns the screen orange!
-        secretCode = ""; // Reset
-    }
-});
+        function onPlayerStateChange(event) {
+            const curtain = document.getElementById('curtain');
+            const shield = document.getElementById('shield');
+            
+            if (event.data == YT.PlayerState.PLAYING) {
+                curtain.style.display = 'none';
+                shield.style.display = 'block';
+                shield.style.pointerEvents = 'auto';
+            }
+            if (event.data == YT.PlayerState.ENDED) {
+                shield.style.pointerEvents = 'none';
+                shield.style.display = 'none';
+                curtain.style.display = 'flex';
+                curtain.innerHTML = `
+                    <div>
+                        <h2>TRANSMISSION ENDED</h2>
+                        <p style="margin-top:20px;">Move to the next location!</p>
+                    </div>`;
+            }
+        }
+
+        // --- EASTER EGG ---
+        let secretCode = "";
+        window.addEventListener("keydown", (e) => {
+            secretCode += e.key.toLowerCase();
+            if (secretCode.includes("carrot")) {
+                alert("🥕 BUNNY MODE ACTIVATED! 🥕");
+                document.body.style.backgroundColor = "#ff9900";
+                secretCode = ""; 
+            }
+        });
     </script>
 </body>
 </html>
