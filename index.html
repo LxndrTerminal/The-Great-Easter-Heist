@@ -174,36 +174,22 @@
         });
 
         // --- 3. V2 SaaS PLATFORM LOGIC (TEXT) ---
-        async function fetchRiddleData() { // <--- MUST HAVE 'async' HERE
-            
-            if(!sbClient) { 
-                console.warn("Using LocalStorage fallback.");
+        async function fetchRiddleData() {
+            // 1. Check our renamed 'sbClient' instance
+            if (!sbClient) { 
+                console.warn("Supabase not connected. Using LocalStorage fallback.");
                 const localData = localStorage.getItem(databaseCardId);
-                if(localData) showTypewriter(localData);
+                if (localData) showTypewriter(localData);
                 else document.getElementById('handler-ui').style.display = 'flex';
                 return;
             }
-        
-            // Now 'await' is legal because it's inside an async function
+
+            // 2. Real Database Call
             const { data, error } = await sbClient
                 .from('mission_data')
                 .select('*')
                 .eq('card_id', databaseCardId)
                 .single();
-        
-            if (data && data.is_locked) {
-                showTypewriter(data.riddle_text);
-            } else {
-                document.getElementById('handler-ui').style.display = 'flex';
-            }
-        }
-
-            // Real Database Call
-            const { data, error } = await supabase
-                .from('mission_data')
-                .select('*')
-                .eq('card_id', databaseCardId)
-                .single();
 
             if (data && data.is_locked) {
                 showTypewriter(data.riddle_text);
@@ -212,23 +198,21 @@
             }
         }
 
-       // Lock the riddle into the database
+        // Lock the riddle into the database
         document.getElementById('lock-riddle-btn').addEventListener('click', async () => {
             const text = document.getElementById('riddle-input').value;
-            if(!text) return alert("Please enter intel.");
+            if (!text) return alert("Please enter intel.");
 
-            // 1. Check our renamed 'sbClient' instance
-            if(!sbClient) {
+            if (!sbClient) {
                 console.log("Saving to local fallback...");
                 localStorage.setItem(databaseCardId, text);
             } else {
-                // 2. Use 'sbClient' for the database call
                 const { error } = await sbClient.from('mission_data').upsert({ 
                     card_id: databaseCardId, 
                     riddle_text: text, 
                     is_locked: true 
                 });
-                if(error) {
+                if (error) {
                     console.error("Supabase Error:", error);
                     return alert("Encryption failed. Check connection.");
                 }
@@ -249,7 +233,7 @@
                 if (i < text.length) {
                     element.innerHTML += text.charAt(i);
                     i++;
-                    setTimeout(typeWriter, 50); // Typing speed
+                    setTimeout(typeWriter, 50); 
                 }
             }
             typeWriter();
