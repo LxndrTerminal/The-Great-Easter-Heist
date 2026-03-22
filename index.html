@@ -136,29 +136,28 @@
     let sbClient = null;
 
     // 2. SUPABASE INITIALIZATION
-    async function getSupabaseClient() {
-        if (sbClient) return sbClient;
-
-        const supabaseUrl = 'REPLACE_WITH_URL';
-        const supabaseKey = 'REPLACE_WITH_KEY';
-
-        // Check if Vercel swapped the placeholders
-        if (supabaseUrl.includes('REPLACE_WITH_URL') || supabaseUrl === '') {
-            console.warn("Using LocalStorage fallback.");
-            return null;
-        }
-
-        try {
-            // Wait for CDN library to be ready
-            if (window.supabase && typeof window.supabase.createClient === 'function') {
-                sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-                console.log("✅ Database Connected.");
-                return sbClient;
+        async function getSupabaseClient() {
+            if (sbClient) return sbClient;
+    
+            const supabaseUrl = 'REPLACE_WITH_URL'.trim();
+            const supabaseKey = 'REPLACE_WITH_KEY'.trim();
+    
+            // LOGIC: If the URL contains 'supabase.co', we know the swap worked.
+            if (supabaseUrl.includes('supabase.co')) {
+                try {
+                    if (window.supabase) {
+                        sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                        console.log("✅ LIVE: Connected to Agent Clover Database.");
+                        return sbClient;
+                    }
+                } catch (e) {
+                    console.error("❌ Connection failed:", e);
+                }
+            } else {
+                console.warn("⚠️ OFFLINE: Placeholder detected. Using LocalStorage.");
             }
-        } catch (e) {
-            console.error("Connection Error:", e);
-        }
-        return null;
+            
+            return null;
     }
 
     // 3. MAIN BUTTON LOGIC
