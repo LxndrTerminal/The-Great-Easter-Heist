@@ -174,17 +174,17 @@
         });
 
         // --- 3. V2 SaaS PLATFORM LOGIC (TEXT) ---
-        async function fetchRiddleData() {
-            // 1. Check our renamed variable 'sbClient'
+        async function fetchRiddleData() { // <--- MUST HAVE 'async' HERE
+            
             if(!sbClient) { 
-                console.warn("Supabase not connected. Using LocalStorage fallback for testing.");
+                console.warn("Using LocalStorage fallback.");
                 const localData = localStorage.getItem(databaseCardId);
                 if(localData) showTypewriter(localData);
                 else document.getElementById('handler-ui').style.display = 'flex';
                 return;
             }
-    
-            // 2. Use 'sbClient' for the actual database call
+        
+            // Now 'await' is legal because it's inside an async function
             const { data, error } = await sbClient
                 .from('mission_data')
                 .select('*')
