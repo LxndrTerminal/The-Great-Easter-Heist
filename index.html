@@ -134,20 +134,23 @@
         const isVideoMission = videoClues.includes(clueId);
 
 
-       // SUPABASE INIT - The "Guarded" Version
-        let supabase; 
+     // --- 1.5 SUPABASE INITIALIZATION ---
+        let sbClient; 
         
-        // Check if it's already initialized by a previous script or the global scope
-        if (typeof window.supabaseClient !== 'undefined') {
-            supabase = window.supabaseClient;
+        // 1. Check if we've already saved a client to the window object
+        if (typeof window.activeSupabaseClient !== 'undefined') {
+            sbClient = window.activeSupabaseClient;
         } else {
             const supabaseUrl = 'REPLACE_WITH_URL';
             const supabaseKey = 'REPLACE_WITH_KEY';
             
-            // Only initialize if we have the actual keys
-            if (supabaseUrl !== 'REPLACE_WITH_URL') {
-                supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-                window.supabaseClient = supabase; // Save it to the window to prevent re-declaration errors
+            // 2. Only initialize if the placeholders have been replaced by Vercel
+            if (supabaseUrl !== 'REPLACE_WITH_URL' && supabaseUrl !== '') {
+                // Use the CDN's "createClient" function to build our specific client
+                sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                
+                // 3. Save it to a unique name on the window to prevent re-declaration issues
+                window.activeSupabaseClient = sbClient; 
             }
         }
 
@@ -172,14 +175,28 @@
 
         // --- 3. V2 SaaS PLATFORM LOGIC (TEXT) ---
         async function fetchRiddleData() {
-            // Mock DB response for local testing if Supabase isn't hooked up yet
-            if(!supabase) {
+            // 1. Check our renamed variable 'sbClient'
+            if(!sbClient) { 
                 console.warn("Supabase not connected. Using LocalStorage fallback for testing.");
                 const localData = localStorage.getItem(databaseCardId);
                 if(localData) showTypewriter(localData);
                 else document.getElementById('handler-ui').style.display = 'flex';
                 return;
             }
+    
+            // 2. Use 'sbClient' for the actual database call
+            const { data, error } = await sbClient
+                .from('mission_data')
+                .select('*')
+                .eq('card_id', databaseCardId)
+                .single();
+        
+            if (data && data.is_locked) {
+                showTypewriter(data.riddle_text);
+            } else {
+                document.getElementById('handler-ui').style.display = 'flex';
+            }
+        }
 
             // Real Database Call
             const { data, error } = await supabase
@@ -195,20 +212,26 @@
             }
         }
 
-        // Lock the riddle into the database
+       // Lock the riddle into the database
         document.getElementById('lock-riddle-btn').addEventListener('click', async () => {
             const text = document.getElementById('riddle-input').value;
             if(!text) return alert("Please enter intel.");
 
-            if(!supabase) {
+            // 1. Check our renamed 'sbClient' instance
+            if(!sbClient) {
+                console.log("Saving to local fallback...");
                 localStorage.setItem(databaseCardId, text);
             } else {
-                const { error } = await supabase.from('mission_data').upsert({ 
+                // 2. Use 'sbClient' for the database call
+                const { error } = await sbClient.from('mission_data').upsert({ 
                     card_id: databaseCardId, 
                     riddle_text: text, 
                     is_locked: true 
                 });
-                if(error) return alert("Encryption failed. Check connection.");
+                if(error) {
+                    console.error("Supabase Error:", error);
+                    return alert("Encryption failed. Check connection.");
+                }
             }
 
             document.getElementById('handler-ui').style.display = 'none';
