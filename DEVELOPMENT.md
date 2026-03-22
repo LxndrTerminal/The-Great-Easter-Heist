@@ -15,8 +15,7 @@ pip install -r requirements.txt
 
 ## 🛠 Automation
 
-To regenerate the entire physical mission deck (including Easter Egg clues), run this one-liner from the project root:
+To regenerate the entire physical mission deck (including Easter Egg clues), run this one-liner from the project root (example deck: CLOVER_HEIST_2026):
 
 ```powershell
-python -c "import segno; base='[https://clover-da-rabbits-website.vercel.app/?clue=](https://clover-da-rabbits-website.vercel.app/?clue=)'; [segno.make(f'{base}{i}').save(f'{i}.png', scale=10, border=2) for i in [0] + list(range(1, 12)) + [99, 42069]]; print('--- All Mission Assets Generated! ---')"
-
+python -c "import segno; base='https://clover-da-rabbits-website.vercel.app/?clue='; deck='CLOVER_HEIST_2026'; [segno.make(f'{base}{i}&deck={deck}').save(f'{i}.png', scale=10, border=2) for i in [0] + list(range(1, 12)) + [99, 42069]]; print(f'--- Assets Generated for Deck: {deck} ---')"
