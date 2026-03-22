@@ -34,7 +34,6 @@
 
 | Parameter | Type | Result |
 | :--- | :--- | :--- |
-| `?clue=99` | **Lore Reveal** | **The Secret HQ:** High-tech 3D footage of Clover’s base. This is the only "digital-only" discovery not found on physical cards. |
 | `?clue=42069` | **The Trap** | **The Rickroll:** Clover "Rickrolls" the user. A classic nod to internet culture to "punish" those attempting to brute-force clue IDs. |
 
 ## 💻 Technical Easter Eggs (Source Code)
@@ -54,15 +53,6 @@
 ### 4. The "Carrot" Keyboard Hook
 **Location:** Global JavaScript Listener.
 **Content:** Typing the word **"carrot"** triggers `BUNNY MODE`, turning the entire background bright orange with a custom alert.
-
-## 📺 Off-Platform Intelligence (YouTube Lore)
-
-* **Secret HQ Bio:** The YouTube channel bio remains in character, confirming that "The treasure is in the chase."
-* **Unlisted Metadata:** Every video description contains "Secret Logs" (e.g., *Log 4.5: Almost fell asleep in the fluffy tunnel*) that flesh out Agent Clover’s personality.
-
-## 🧩 Technical Secrets
-* **The Spy-Shield:** The transparent overlay isn't just a UI trick; it's a "Biometric Lock" simulated in CSS.
-* **The Connection Curtain:** The hex codes used for the green "decryption" text are actually the exact shades of clover green found in the Western Cape.
 
 ---
 *End of Classified Document.*
