@@ -41,19 +41,8 @@
         }
         #start-button:active { transform: translateY(5px); box-shadow: 0 5px 0 #f48fb1; }
 
-        /* V1 YouTube Container */
-        #player-container {
-            display: none; position: fixed; top: 0; left: 0;
-            width: 100vw; height: 100vh; background: #000; z-index: 9999;
-        }
+       
         #player { width: 100%; height: 100%; }
-        
-        #curtain {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #1a1a1a; display: flex; align-items: center; justify-content: center;
-            color: var(--spy-green); font-family: 'Courier New', Courier, monospace;
-            z-index: 10001; pointer-events: none; text-align: center;
-        }
         
         .spinner {
             border: 4px solid rgba(0, 255, 0, 0.1); border-left-color: var(--spy-green);
@@ -98,18 +87,6 @@
         <div class="grass"></div>
     </div>
 
-    <div id="player-container">
-        <div id="player"></div>
-        <div id="curtain">
-            <div>
-                <div class="spinner"></div>
-                <h2>ESTABLISHING CONNECTION...</h2>
-                <p>Decrypting Agent Clover's Video</p>
-            </div>
-        </div>
-        <div id="shield"></div>
-    </div>
-
     <div id="tactical-container">
         <div id="handler-ui" class="handler-ui">
             <h2>[HANDLER OVERRIDE REQUIRED]</h2>
@@ -124,59 +101,49 @@
         </div>
     </div>
 
-   <script>
+ <script>
     // 1. CONFIG & GLOBALS
     const urlParams = new URLSearchParams(window.location.search);
-    const clueId = urlParams.get('clue') || '1';
+    const clueId = urlParams.get('clue') || '0'; // Default to Clue 0
     const deckId = urlParams.get('deck') || 'DEFAULT_DECK'; 
     const databaseCardId = `${deckId}-STATION-${clueId}`;
-    const videoClues = ['0', '10']; 
-    const isVideoMission = videoClues.includes(clueId);
 
     let sbClient = null;
 
     // 2. SUPABASE INITIALIZATION
-        async function getSupabaseClient() {
-            if (sbClient) return sbClient;
-    
-            const supabaseUrl = 'REPLACE_WITH_URL'.trim();
-            const supabaseKey = 'REPLACE_WITH_KEY'.trim();
-    
-            // LOGIC: If the URL contains 'supabase.co', we know the swap worked.
-            if (supabaseUrl.includes('supabase.co')) {
-                try {
-                    if (window.supabase) {
-                        sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-                        console.log("✅ LIVE: Connected to Agent Clover Database.");
-                        return sbClient;
-                    }
-                } catch (e) {
-                    console.error("❌ Connection failed:", e);
+    async function getSupabaseClient() {
+        if (sbClient) return sbClient;
+
+        const supabaseUrl = 'REPLACE_WITH_URL'.trim();
+        const supabaseKey = 'REPLACE_WITH_KEY'.trim();
+
+        if (supabaseUrl.includes('supabase.co')) {
+            try {
+                if (window.supabase) {
+                    sbClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                    return sbClient;
                 }
-            } else {
-                console.warn("⚠️ OFFLINE: Placeholder detected. Using LocalStorage.");
+            } catch (e) {
+                console.error("Database Connection Failed.");
             }
-            
-            return null;
+        }
+        return null;
     }
 
     // 3. MAIN BUTTON LOGIC
     document.getElementById('start-button').addEventListener('click', async function() {
-        console.log("Decrypt button clicked...");
         document.getElementById('ui-layer').style.display = 'none';
-
-        if (isVideoMission) {
-            initYouTubePlayer();
-        } else {
-            document.getElementById('tactical-container').style.display = 'block';
-            await fetchRiddleData();
-        }
+        document.getElementById('tactical-container').style.display = 'block';
+        
+        // Go straight to fetching data for the current Clue ID
+        await fetchRiddleData();
     });
 
     // 4. DATABASE FETCH
     async function fetchRiddleData() {
         const client = await getSupabaseClient();
         
+        // Fallback to LocalStorage if offline/unconfigured
         if (!client) {
             const localData = localStorage.getItem(databaseCardId);
             if (localData) showTypewriter(localData);
@@ -193,14 +160,15 @@
         if (data && data.is_locked) {
             showTypewriter(data.riddle_text);
         } else {
+            // No riddle found or not locked? Show the Input Box for the Handler
             document.getElementById('handler-ui').style.display = 'flex';
         }
     }
 
-    // 5. LOCK RIDDLE
+    // 5. HANDLER: LOCK RIDDLE
     document.getElementById('lock-riddle-btn').addEventListener('click', async () => {
         const text = document.getElementById('riddle-input').value;
-        if (!text) return alert("Please enter intel.");
+        if (!text) return alert("System requires intel input.");
 
         const client = await getSupabaseClient();
 
@@ -219,12 +187,13 @@
         showTypewriter(text);
     });
 
-    // 6. UI EFFECTS
+    // 6. TERMINAL EFFECT
     function showTypewriter(text) {
         document.getElementById('terminal-ui').style.display = 'flex';
         const element = document.getElementById('typewriter-text');
         element.innerHTML = '';
         let i = 0;
+        
         function type() {
             if (i < text.length) {
                 element.innerHTML += text.charAt(i);
@@ -233,38 +202,6 @@
             }
         }
         type();
-    }
-
-    // 7. YOUTUBE LOGIC
-    const videoMap = { '0': 'HizAxchnSaM', '10': 'EZwp9gb4Zl4', '42069': 'dQw4w9WgXcQ' };
-    let player;
-
-    function initYouTubePlayer() {
-        const container = document.getElementById('player-container');
-        container.style.display = 'block';
-        if (container.requestFullscreen) container.requestFullscreen();
-
-        if (window.YT && window.YT.Player) {
-            launchVideo();
-        } else {
-            const tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            document.head.appendChild(tag);
-            window.onYouTubeIframeAPIReady = launchVideo;
-        }
-    }
-
-    function launchVideo() {
-        player = new YT.Player('player', {
-            height: '100%', width: '100%',
-            videoId: videoMap[clueId] || videoMap['0'],
-            playerVars: { 'autoplay': 1, 'controls': 1 },
-            events: { 'onStateChange': (e) => {
-                if (e.data == YT.PlayerState.PLAYING) {
-                    document.getElementById('curtain').style.display = 'none';
-                }
-            }}
-        });
     }
 </script>
 </body>
